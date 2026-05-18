@@ -15,9 +15,9 @@ with st.sidebar:
 
     modo = st.radio(
         "Modo de geração",
-        ["📊 Relatório Estruturado (template)", "🤖 Relatório com IA (DeepSeek)"],
+        ["📊 Relatório Estruturado (template)", "🤖 Relatório com IA (DeepSeek V4 Flash)"],
         index=0,
-        help="Template usa dados extraídos direto. IA gera análise narrativa (requer API key).",
+        help="Template usa dados extraídos direto. IA segue as instruções do agente jurídico + DeepSeek via OpenRouter.",
     )
 
     st.markdown("**Tom / Objetivo do Relatório**")
@@ -31,17 +31,14 @@ with st.sidebar:
         st.divider()
         st.markdown("**Configuração da IA**")
         with st.expander("API Key (opcional no deploy)", expanded=False):
-            api_key = st.text_input("API Key", type="password", help="Deixe vazio para usar a configurada no servidor")
+            api_key = st.text_input("API Key (OpenRouter ou DeepSeek)", type="password", help="Deixe vazio pra usar a configurada como secret do servidor")
             if api_key:
-                import os
                 os.environ["AI_API_KEY"] = api_key
-            api_url = st.text_input("API URL", value="https://api.deepseek.com/v1/chat/completions")
+            api_url = st.text_input("API URL", value="https://openrouter.ai/api/v1/chat/completions")
             if api_url:
-                import os
                 os.environ["AI_API_URL"] = api_url
-            model = st.text_input("Modelo", value="deepseek-chat")
+            model = st.text_input("Modelo", value="deepseek/deepseek-v4-flash")
             if model:
-                import os
                 os.environ["AI_MODEL"] = model
 
 st.divider()

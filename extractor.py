@@ -167,19 +167,37 @@ def gerar_relatorio_template(dados, headers, prompt_extra=""):
     return "".join(linhas), r
 
 
+AGENT_INSTRUCOES = """# Juridic Report Extractor — XLSX
+
+Extrai dados de planilhas do sistema DJUR3 e gera relatórios analíticos em markdown.
+
+## Output esperado
+1. Dashboard Geral (total, valores, UFs, cooperativas)
+2. Por Tipo de Ação (qtd, valores, exemplos)
+3. Por Relevância / Prioridade
+4. Por Fase Processual
+5. Casos com Observações (ATP.Texto)
+6. Prazos (Agenda/Fatal) mais próximos
+7. Summary (se solicitado tom específico)
+
+## Regras OBRIGATÓRIAS
+1. NUNCA inventar dados, jurisprudências, prazos ou informações que não estão no arquivo.
+2. SEMPRE mencionar somente o que está nos dados fornecidos.
+3. Corroborar com valores brutos da planilha sempre que possível.
+4. Preservar números de processo exatos.
+5. Valores da causa em R$.
+6. Se o prompt pedir tom de "minimizar erro" ou "destacar condução correta", ajustar a narrativa."""
+
+
 def gerar_relatorio_ia(dados, headers, prompt_extra=""):
-    """Gera relatório via API OpenAI-compatible (DeepSeek, etc.)."""
+    """Gera relatório via API compatível OpenAI (OpenRouter / DeepSeek)."""
     r = resumir_dados(dados)
 
-    system = """Você é um analista jurídico especializado em elaborar relatórios processuais.
-Gere relatórios EM PORTUGUÊS, concisos e baseados APENAS nos dados fornecidos.
-NUNCA invente informações, números, jurisprudências ou prazos.
-Estrutura esperada: resumo executivo, análise por tipo/fase/relevância, casos com observações, próximos prazos."""
-
+    system = AGENT_INSTRUCOES
     if prompt_extra.strip():
-        system += f"\n\nOrientação adicional do usuário: {prompt_extra}"
+        system += f"\n\n## Configuração adicional do usuário\n{prompt_extra}"
 
-    user_msg = f"""Analise estes {r['total']} processos do DJUR3 e gere um relatório.
+    user_msg = f"""Analise estes {r['total']} processos do DJUR3 e gere um relatório em markdown seguindo as instruções do sistema.
 
 ## Dados Consolidados
 - Total: {r['total']} processos
@@ -208,19 +226,26 @@ Estrutura esperada: resumo executivo, análise por tipo/fase/relevância, casos 
 {json.dumps(r['prazos'], ensure_ascii=False, indent=2)}
 """
 
-    api_url = os.environ.get("AI_API_URL", "https://api.deepseek.com/v1/chat/completions")
-    api_key = os.environ.get("AI_API_KEY", "")
-    model = os.environ.get("AI_MODEL", "deepseek-chat")
+    api_url = os.environ.get("AI_API_URL", "https://openrouter.ai/api/v1/chat/completions")
+    api_key = os.environ.get("AI_API_KEY", "") or os.environ.get("OPENROUTER_API_KEY", "") or os.environ.get("OPENAI_API_KEY", "")
+    model = os.environ.get("AI_MODEL", "deepseek/deepseek-v4-flash")
 
     if not api_key:
-        return None, "API key não configurada. Configure AI_API_KEY no .env ou secrets."
+        return None, "API key não configurada. Configure OPENROUTER_API_KEY, AI_API_KEY ou OPENAI_API_KEY."
+
+    headers_api = {"Content-Type": "application/json"}
+    if "openrouter" in api_url:
+        headers_api["Authorization"] = f"Bearer {api_key}"
+        headers_api["HTTP-Referer"] = "https://djur3-report-app.streamlit.app"
+    else:
+        headers_api["Authorization"] = f"Bearer {api_key}"
 
     import httpx
 
     try:
         resp = httpx.post(
             api_url,
-            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            headers=headers_api,
             json={
                 "model": model,
                 "messages": [

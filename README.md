@@ -1,39 +1,49 @@
 # DJUR3 Report App ⚖️
 
-App web para analisar planilhas do DJUR3 e gerar relatórios jurídicos.
+App web pra analisar planilhas do DJUR3 e gerar relatórios jurídicos.
 
 ## Funcionalidades
-
-- Upload de planilha `.xlsx` exportada do DJUR3
-- Campo para configurar **tom/objetivo** do relatório
-- Gera relatório markdown com:
-  - Dashboard geral (valores, UFs, cooperativas)
-  - Distribuição por tipo de ação, relevância, fase processual
-  - Casos com observações (ATP.Texto)
-  - Top 10 prazos mais urgentes
+- Upload de `.xlsx` exportado do DJUR3 (sheet CPJ3C)
+- Campo pra configurar **tom/objetivo** do relatório
+- **2 modos de geração**:
+  - 📊 **Template** — extrai dados e monta relatório estruturado (offline, instantâneo)
+  - 🤖 **IA (DeepSeek V4 Flash)** — usa as instruções do **agente jurídico** como system prompt, via OpenRouter/DeepSeek
 - Download do relatório em Markdown
+
+## Modo IA
+O relatório via IA segue **rigorosamente** as regras do agente em `juridic-report-extractor-xlsx.md`:
+- NUNCA inventa dados
+- Só usa o que está na planilha
+- Corrobora com valores brutos
+- Preserva números de processo
 
 ## Como rodar local
 
 ```bash
 pip install -r requirements.txt
+
+# Configurar API key pro modo IA
+set OPENROUTER_API_KEY=sk-or-v1-...
+# ou via .env
+
 streamlit run app.py
 ```
 
-## Deploy no Streamlit Cloud (gratuito)
+## Deploy no Streamlit Cloud (grátis)
 
-1. Crie um repositório no GitHub com os arquivos
+1. Crie repositório no GitHub
 2. Acesse https://share.streamlit.io
-3. Conecte seu GitHub e selecione o repositório
-4. Streamlit detecta `app.py` e `requirements.txt` automaticamente
-5. Pronto! URL pública gerada.
+3. "New app" → selecione o repo
+4. Main file: `app.py`
+5. Vá em Settings → Secrets e adicione:
+   ```toml
+   OPENROUTER_API_KEY = "sk-or-v1-..."
+   ```
 
-## Estrutura
+## Variáveis de Ambiente
 
-```
-djur3-report-app/
-├── app.py              # Interface web (Streamlit)
-├── extractor.py        # Lógica de extração e geração
-├── requirements.txt    # Dependências
-└── README.md           # Este arquivo
-```
+| Variável | Obrigatória | Padrão | Descrição |
+|----------|-------------|--------|-----------|
+| `OPENROUTER_API_KEY` | Sim (modo IA) | - | Chave da OpenRouter |
+| `AI_API_URL` | Não | `https://openrouter.ai/api/v1/chat/completions` | Endpoint OpenAI-compatível |
+| `AI_MODEL` | Não | `deepseek/deepseek-v4-flash` | Modelo |
